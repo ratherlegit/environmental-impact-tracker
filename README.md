@@ -75,7 +75,7 @@ Sources: Epoch AI (2025), UC Riverside / Li et al. (2023). See `references/sourc
 
 ## Keeping it up to date
 
-Model rates are reviewed every 6 months. When new Claude models are released or new research is published, update the rates table in `SKILL.md` following the instructions in `references/sources.md`.
+Model rates are reviewed every 2 months. When new Claude models are released or new research is published, update the rates table in `SKILL.md` following the instructions in `references/sources.md`.
 
 ## License
 
