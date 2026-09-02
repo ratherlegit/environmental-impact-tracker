@@ -106,7 +106,7 @@ Notice most of the cost here comes from the four subagents, not the main turn â€
 
 ## Keeping it up to date
 
-Model rates are reviewed every 2 months. When new Claude models are released or new research is published, update the rates table in `SKILL.md` following the instructions in `references/sources.md`.
+This repo is maintained on an ongoing basis, not a one-time drop. Model rates are reviewed every 2 months, and updated sooner whenever a major new Claude model ships or new peer-reviewed research on LLM inference energy/water use is published â€” see the Update Log in `references/sources.md` for the full history of what changed and why. When you do update it, follow the instructions there.
 
 ## Changelog
 
