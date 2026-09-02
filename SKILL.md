@@ -6,7 +6,7 @@ description: Calculates and displays the environmental footprint of Claude's tok
 
 # Environmental Impact Tracker
 
-**Version:** 1.1.0 · **Last updated:** 2026-09-03 — if today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Version:** 1.1.0 · **Last updated:** 2026-09-03. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
@@ -15,7 +15,7 @@ description: Calculates and displays the environmental footprint of Claude's tok
 1. **Add enforcement rule to `CLAUDE.md`** (or `AGENTS.md` / `GEMINI.md`) if not already present:
 ```markdown
 ## Environmental Impact
-After any turn that involves subagents OR is estimated to exceed 5,000 tokens, display the environmental impact using the `environmental-impact-tracker` skill. This is a hard rule — do not skip it.
+After any turn that involves subagents OR is estimated to exceed 5,000 tokens, display the environmental impact using the `environmental-impact-tracker` skill. This is a hard rule. Do not skip it.
 ```
 
 2. **Create log file** at `.environmental-impact-log.json` in the project root if it doesn't exist: `{ "entries": [] }`
@@ -28,13 +28,13 @@ After any turn that involves subagents OR is estimated to exceed 5,000 tokens, d
 - User asks about environmental impact, energy use, or sustainability
 - After displaying, offer: "Want to see your session, weekly, or project total?"
 
-**Note on autonomous triggering:** testing found that a bare, vague phrase like "show me my session total" or "show me this week's impact" — with no mention of environmental/energy/carbon/footprint — does not reliably trigger this skill on its own, even when this skill is installed and available; it reads as too ambiguous against other plausible meanings. Don't rely on soft phrase-matching alone. If a user's request could plausibly mean this skill (session/weekly/project totals, especially as a follow-up after this skill has already displayed impact once this session), treat it as a match rather than asking for clarification — the ambiguity problem is specifically about a *cold* trigger with no prior signal, not about a follow-up in a conversation where this skill's domain is already established.
+**Note on autonomous triggering:** testing found that a bare, vague phrase like "show me my session total" or "show me this week's impact" (with no mention of environmental/energy/carbon/footprint) does not reliably trigger this skill on its own, even when this skill is installed and available; it reads as too ambiguous against other plausible meanings. Don't rely on soft phrase-matching alone. If a user's request could plausibly mean this skill (session/weekly/project totals, especially as a follow-up after this skill has already displayed impact once this session), treat it as a match rather than asking for clarification. The ambiguity problem is specifically about a *cold* trigger with no prior signal, not about a follow-up in a conversation where this skill's domain is already established.
 
 ---
 
 ## Calculation
 
-Every query pays a **fixed per-query overhead** (model routing/load, independent of length) plus a **marginal per-token rate**. Turns whose total tokens (input + output + skill + this agent's own tokens) exceed **50,000** switch to the Large-Context Marginal Rate — see `references/sources.md` for why 50,000 is a pragmatic interpolation point, not a measured boundary.
+Every query pays a **fixed per-query overhead** (model routing/load, independent of length) plus a **marginal per-token rate**. Turns whose total tokens (input + output + skill + this agent's own tokens) exceed **50,000** switch to the Large-Context Marginal Rate. See `references/sources.md` for why 50,000 is a pragmatic interpolation point, not a measured boundary.
 
 ```
 tier = "large-context" if total_tokens > 50,000 else "typical"
@@ -61,10 +61,10 @@ Total_water    (mL) = Total_energy × 1.7
 | Claude Haiku 4.5 | 0.018 | 9 | 45 | 43 | 4 |
 | Unknown (use Sonnet) | 0.053 | 27 | 134 | 129 | 11 |
 
-Older generations (Opus/Sonnet/Haiku 4.x and earlier) share the same rate as their current-generation successor in the table above — Anthropic hasn't published per-generation compute deltas, so we hold the rate constant within a tier rather than guess.
+Older generations (Opus/Sonnet/Haiku 4.x and earlier) share the same rate as their current-generation successor in the table above. Anthropic hasn't published per-generation compute deltas, so we hold the rate constant within a tier rather than guess.
 
 - Cached reads: 10% of the applicable tier's marginal input rate
-- A subagent is its own model invocation — give it its own fixed overhead, not just its token count folded into the parent's marginal cost
+- A subagent is its own model invocation: give it its own fixed overhead, not just its token count folded into the parent's marginal cost
 - Subagent tokens: read from `<usage>total_tokens: N</usage>` blocks in agent results; classify that agent's own tier independently by its own total tokens
 
 For comparison tables (LED bulb, phone charge, water bottle etc.) read `references/comparisons.md`.
@@ -87,7 +87,7 @@ Tokens: [input] in + [output] out + ~2,500 skill = [total][ · long-context tier
 💡 If a lighter model had been used:
   [Model]: [X.XX] Wh / [X.XX] mL  ([Y]x less)
 
-Note: Estimates — see references/sources.md for methodology.
+Note: Estimates. See references/sources.md for methodology.
 ```
 
 Omit agent line if no Agent calls. Omit lighter model section if Haiku was used. Read `references/comparisons.md` to select the right relatable comparison for the energy/water values.
@@ -104,9 +104,9 @@ After every impact display, append to `.environmental-impact-log.json`:
 ```
 
 **Summaries (read log and aggregate):**
-- **Session** — entries since today's first entry
-- **This week** — entries within the current Mon–Sun week
-- **This project** — all entries in the file
+- **Session**: entries since today's first entry
+- **This week**: entries within the current Mon–Sun week
+- **This project**: all entries in the file
 
 To reset a session: append `{ "timestamp": "...", "context": "session_start" }` and use that as the new session boundary.
 
@@ -114,4 +114,4 @@ To reset a session: append `{ "timestamp": "...", "context": "session_start" }` 
 
 ## Tone
 
-Informative, not preachy. Specific — never say "negligible." Honest — these are estimates. Don't display for every tiny interaction.
+Informative, not preachy. Specific: never say "negligible." Honest: these are estimates. Don't display for every tiny interaction.
