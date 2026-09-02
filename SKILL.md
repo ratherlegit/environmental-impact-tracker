@@ -5,7 +5,7 @@ description: Calculates and displays the environmental footprint of Claude's tok
 
 # Environmental Impact Tracker
 
-**Last updated:** 2026-03-16 — if today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Last updated:** 2026-09-03 — if today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
@@ -44,10 +44,13 @@ Total_water    (mL) = Total_energy × 1.7
 
 | Model | Input | Output | Blended |
 |-------|-------|--------|---------|
-| Claude Opus 4.x | 50 | 250 | ~240 |
-| Claude Sonnet 4.x | 30 | 150 | ~145 |
-| Claude Haiku 4.x | 10 | 50 | ~50 |
+| Claude Fable 5 | 100 | 500 | ~480 |
+| Claude Opus 5 | 50 | 250 | ~240 |
+| Claude Sonnet 5 | 30 | 150 | ~145 |
+| Claude Haiku 4.5 | 10 | 50 | ~50 |
 | Unknown | 30 | 150 | (use Sonnet) |
+
+Older generations (Opus/Sonnet/Haiku 4.x and earlier) share the same rate as their current-generation successor in the table above — Anthropic hasn't published per-generation compute deltas, so we hold the rate constant within a tier rather than guess.
 
 - Cached reads: 10% of input rate
 - Blended rate assumes ~80/20 input/output mix — use split formula when counts are known

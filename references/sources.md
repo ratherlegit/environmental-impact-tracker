@@ -22,3 +22,7 @@ When a new Claude model is released or newer research is published:
 5. Add any new references to the Sources table above
 
 To find updated rates: search Epoch AI's compute benchmarks, Anthropic's sustainability reports, or peer-reviewed papers on LLM inference energy.
+
+## Update Log
+
+- **2026-09-03** — Relabeled the tier table to current-generation models (Fable 5, Opus 5, Sonnet 5, Haiku 4.5). No rate changes to the Opus/Sonnet/Haiku tiers: current API pricing (Opus $5 : Sonnet $3 : Haiku $1 per MTok input) preserves the same 5:3:1 ratio the existing Wh estimates were built on, so the cross-check still holds. Added Claude Fable 5 as a new top tier, priced at 2x Opus 5 ($10 vs $5 input) — scaled its Wh rate linearly from Opus 5 on the same basis.
