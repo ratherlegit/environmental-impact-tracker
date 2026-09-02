@@ -1,6 +1,6 @@
 # Environmental Impact Tracker
 
-**v1.1.0**
+**v1.2.0**
 
 A Claude Code skill that calculates and displays the environmental footprint of your AI interactions, translating abstract token usage into energy consumption (Wh), water usage (mL), and relatable real-world comparisons.
 
@@ -50,6 +50,25 @@ Or copy `SKILL.md` (and the `references/` folder) into your Claude Code skills d
 
 Paste the contents of `SKILL.md` into your system prompt or project instructions.
 
+## Setup
+
+Installing the skill alone is not enough for it to fire automatically. It needs an enforcement rule and a toggle file, both one-time steps:
+
+1. **Add this rule to `~/.claude/CLAUDE.md`** (global, applies to every project; use a project-local `CLAUDE.md` instead if you only want it in one place):
+
+```markdown
+## Environmental Impact
+Before responding to any turn that involves subagents OR is estimated to exceed 5,000 tokens, check `~/.claude/environmental-impact-tracker.state`. If the file is missing or contains "on" (the default), display the environmental impact using the `environmental-impact-tracker` skill; treat this as a hard rule and do not skip it. If the file contains "off", skip the automatic display, but the skill is still available on explicit request.
+```
+
+2. **Create the toggle file** at `~/.claude/environmental-impact-tracker.state`, containing exactly: `on`
+
+```bash
+echo "on" > ~/.claude/environmental-impact-tracker.state
+```
+
+Without step 1, the skill only fires on explicit request (and, per the Usage section below, even explicit requests are less reliable than you'd expect). Without step 2, the rule still works: a missing file defaults to `on`, but creating it up front means the toggle described below is ready to use immediately.
+
 ## Usage
 
 **Reliable trigger**: the `CLAUDE.md` rule added during Setup. It fires automatically on any heavy turn (5,000+ tokens or subagent use), no need to ask.
@@ -60,6 +79,21 @@ Paste the contents of `SKILL.md` into your system prompt or project instructions
 - **Name the skill directly** if a vague phrase doesn't land: *"Use the environmental-impact-tracker skill to show my session total."*
 
 If you want the "ask casually and it just works" experience, extend the `CLAUDE.md` enforcement rule from Setup to also cover explicit cumulative-total requests, rather than relying on the skill description to be picked up unprompted.
+
+## Enable / Disable
+
+Automatic firing is controlled by the toggle file from Setup, `~/.claude/environmental-impact-tracker.state`. It holds a single word: `on` or `off`.
+
+- **Turn it off**: ask directly, e.g. *"Turn off environmental impact tracking."* Claude writes `off` to the state file. Automatic display stops, but the skill still works if you ask for it by name.
+- **Turn it back on**: *"Turn on environmental impact tracking"* writes `on` back.
+- **Toggle it yourself** without asking Claude:
+
+```bash
+echo "off" > ~/.claude/environmental-impact-tracker.state   # disable
+echo "on"  > ~/.claude/environmental-impact-tracker.state   # re-enable
+```
+
+A missing or corrupted state file defaults to `on` (fails open), matching the skill's original always-on behavior rather than silently going quiet.
 
 ## How it works
 
@@ -109,6 +143,10 @@ Notice most of the cost here comes from the four subagents, not the main turn. E
 This repo is maintained on an ongoing basis, not a one-time drop. Rates are updated whenever a major new Claude model ships or new peer-reviewed research on LLM inference energy/water use is published. See the Update Log in `references/sources.md` for the full history of what changed and why, and follow the instructions there when you do update it.
 
 ## Changelog
+
+**1.2.0** (2026-09-03)
+- Added an on/off toggle: `~/.claude/environmental-impact-tracker.state` controls automatic firing without uninstalling the skill or editing `CLAUDE.md`
+- Added a README Setup section spelling out the `CLAUDE.md` rule and state file explicitly. It was previously only documented inside `SKILL.md`, invisible to anyone browsing the repo
 
 **1.1.0** (2026-09-03)
 - Replaced the flat per-token rate model with a fixed-overhead + marginal-rate model, derived from a peer-reviewed 2026 Joule paper's test-time-scaling data

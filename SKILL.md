@@ -1,24 +1,37 @@
 ---
 name: environmental-impact-tracker
-version: 1.1.0
+version: 1.2.0
 description: Calculates and displays the environmental footprint of Claude's token usage, translating computational costs into energy consumption (Wh), water usage (mL), and relatable real-world comparisons. Use when: (1) a single request/response exceeds 5,000 tokens, (2) completing a complex task like coding, document generation, or research, (3) the user asks about environmental impact, energy use, or sustainability, (4) tracking cumulative session, weekly, or project totals when requested.
 ---
 
 # Environmental Impact Tracker
 
-**Version:** 1.1.0 · **Last updated:** 2026-09-03. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Version:** 1.2.0 · **Last updated:** 2026-09-03. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
 ## Setup (First Use)
 
-1. **Add enforcement rule to `CLAUDE.md`** (or `AGENTS.md` / `GEMINI.md`) if not already present:
+1. **Add enforcement rule to `CLAUDE.md`** (or `AGENTS.md` / `GEMINI.md`) if not already present. Global (`~/.claude/CLAUDE.md`, applies to every project) is recommended over per-project, since the auto-trigger is only as reliable as the rule's reach:
 ```markdown
 ## Environmental Impact
-After any turn that involves subagents OR is estimated to exceed 5,000 tokens, display the environmental impact using the `environmental-impact-tracker` skill. This is a hard rule. Do not skip it.
+Before responding to any turn that involves subagents OR is estimated to exceed 5,000 tokens, check `~/.claude/environmental-impact-tracker.state`. If the file is missing or contains "on" (the default), display the environmental impact using the `environmental-impact-tracker` skill; treat this as a hard rule and do not skip it. If the file contains "off", skip the automatic display, but the skill is still available on explicit request.
 ```
 
-2. **Create log file** at `.environmental-impact-log.json` in the project root if it doesn't exist: `{ "entries": [] }`
+2. **Create the toggle state file** at `~/.claude/environmental-impact-tracker.state` if it doesn't exist, containing exactly: `on`
+
+3. **Create log file** at `.environmental-impact-log.json` in the project root if it doesn't exist: `{ "entries": [] }`
+
+---
+
+## Enable / Disable
+
+The skill's automatic firing is controlled by `~/.claude/environmental-impact-tracker.state`, a single-word file: `on` or `off`.
+
+- **"Turn off environmental impact tracking"** (or similar): write `off` to the state file, confirm it's done, and stop auto-displaying until it's turned back on.
+- **"Turn on environmental impact tracking"** (or similar): write `on` to the state file, confirm it's done.
+- **When off**, the hard rule in `CLAUDE.md` does not fire automatically, but the skill is still fully usable on explicit request ("show me my session total" plus the skill named directly, or a clear ask about environmental impact). Off means "stop interrupting me automatically," not "disable entirely."
+- **When checking state**, missing file or unreadable content defaults to `on` (fail open, matching the original always-on behavior) rather than silently going quiet.
 
 ---
 
