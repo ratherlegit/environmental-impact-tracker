@@ -12,7 +12,7 @@ After heavy turns (5,000+ tokens, subagent use, or complex tasks), Claude automa
 Energy: 22.1 Wh (about 1 phone charge)
 Water:  37.6 mL (about 2.5 tablespoons)
 
-Model: Claude Sonnet 4.6
+Model: Claude Sonnet 5
 Tokens: 25,000 in + 6,000 out + ~2,500 skill = 33,500
 + 136,000 agent tokens across 4 agents = 169,500 total
 
@@ -63,9 +63,10 @@ Energy and water estimates are calculated using published research on LLM infere
 
 | Model | Input (Wh/MTok) | Output (Wh/MTok) |
 |-------|----------------|-----------------|
-| Claude Opus 4.x | 50 | 250 |
-| Claude Sonnet 4.x | 30 | 150 |
-| Claude Haiku 4.x | 10 | 50 |
+| Claude Fable 5 | 100 | 500 |
+| Claude Opus 5 | 50 | 250 |
+| Claude Sonnet 5 | 30 | 150 |
+| Claude Haiku 4.5 | 10 | 50 |
 
 Water usage: 1.7 mL per Wh (average data center cooling + power generation).
 
