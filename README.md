@@ -1,12 +1,32 @@
 # Environmental Impact Tracker
 
-**v1.2.0**
+**v1.4.0**
 
 A Claude Code skill that calculates and displays the environmental footprint of your AI interactions, translating abstract token usage into energy consumption (Wh), water usage (mL), and relatable real-world comparisons.
 
 ## What it does
 
-After heavy turns (5,000+ tokens, subagent use, or complex tasks), Claude automatically displays:
+Tracks the energy and water use of **every** Claude response in the background, then turns that history into weekly, monthly, quarterly, and annual reports.
+
+![Monthly impact report](docs/impact-report.png)
+
+*A monthly report: this period vs last, share of water by project, and water over time. Each figure is computed from the exact token counts of the logged responses.*
+
+Features:
+- **Tracks everything**: a Stop hook logs every response, subagents included, so nothing depends on Claude remembering to log it
+- **Period reports**: weekly, monthly, quarterly, and annual totals with change vs the previous period, a per-project breakdown, and a trend chart
+- **Four modes**: reports only, a line after large responses, both, or off
+- **History backfill**: rebuilds past usage from Claude Code's own session transcripts
+- **Per-turn display on request**: energy and water for any exchange, with model efficiency comparison and subagent totals (sample below)
+- **One shared log**: `~/.claude/environmental-impact-log.json` covers every project
+
+In `per-response` mode the hook prints one line after large responses (more than 5,000 fresh tokens, or any subagent response):
+
+```
+🌍 Impact this turn: 5.04 Wh · 8.6 mL · 94,786 tokens · 12 subagent responses
+```
+
+Ask Claude for the longer display of any exchange and you get:
 
 ```
 🌍 Environmental Impact of This Response
@@ -24,78 +44,99 @@ Tokens: 25,000 in + 6,000 out + ~2,500 skill = 33,500
 Note: Estimates. See references/sources.md for methodology.
 ```
 
-Features:
-- **Per-turn impact**: energy and water for each heavy exchange
-- **Subagent tracking**: includes all spawned agent activity in the total
-- **Skill cost included**: accounts for the tokens used to load this skill itself
-- **Model efficiency comparison**: shows what the same work would have cost on a lighter model
-- **Cumulative tracking**: session, weekly, and project totals via a local log file
-- **Auto-wires enforcement**: adds a rule to your `CLAUDE.md` on first use so it never gets skipped
-
 ## Installation
 
 ### Claude Code
 
-```
-/plugin install example-skills@anthropic-agent-skills
-```
-
-Or copy `SKILL.md` (and the `references/` folder) into your Claude Code skills directory:
+Copy this repo's contents (`SKILL.md`, `scripts/`, `references/`) into your Claude Code skills directory:
 
 ```
-~/.claude/plugins/cache/anthropic-agent-skills/example-skills/unknown/skills/environmental-impact-tracker/
+~/.claude/skills/environmental-impact-tracker/
 ```
+
+Python 3 is required for the hook and the reports.
 
 ### Manual (any Claude environment)
 
-Paste the contents of `SKILL.md` into your system prompt or project instructions.
+Paste the contents of `SKILL.md` into your system prompt or project instructions. Automatic tracking and reports need Claude Code, since they rely on its hooks and session transcripts.
 
 ## Setup
 
-Installing the skill alone is not enough for it to fire automatically. It needs an enforcement rule and a toggle file, both one-time steps:
+Installing the skill alone does not start tracking. Setup is a few one-time steps, and Claude can walk you through them the first time you use the skill:
 
-1. **Add this rule to `~/.claude/CLAUDE.md`** (global, applies to every project; use a project-local `CLAUDE.md` instead if you only want it in one place):
+1. **Pick a mode** (see Modes below). Claude asks and writes your choice to `~/.claude/environmental-impact-tracker.state`. `reports` is recommended.
+
+```bash
+echo "reports" > ~/.claude/environmental-impact-tracker.state
+```
+
+2. **Add the Stop hook** to `~/.claude/settings.json`, under `hooks.Stop`:
+
+```json
+{ "hooks": [ { "type": "command", "command": "python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_hook.py", "timeout": 30 } ] }
+```
+
+3. **Backfill your history** once:
+
+```bash
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_hook.py --backfill
+```
+
+This imports every session transcript Claude Code still has. Older transcripts are cleaned up over time, so the log is the only permanent record.
+
+4. **Add this rule to `~/.claude/CLAUDE.md`** so Claude leaves display to the hook:
 
 ```markdown
 ## Environmental Impact
-Before responding to any turn that involves subagents OR is estimated to exceed 5,000 tokens, check `~/.claude/environmental-impact-tracker.state`. If the file is missing or contains "on" (the default), display the environmental impact using the `environmental-impact-tracker` skill; treat this as a hard rule and do not skip it. If the file contains "off", skip the automatic display, but the skill is still available on explicit request.
+Impact tracking is automatic (a Stop hook logs every response). Do not display impact on your own. When the user asks for an impact report, a total, or to change the tracking mode, use the `environmental-impact-tracker` skill.
 ```
 
-2. **Create the toggle file** at `~/.claude/environmental-impact-tracker.state`, containing exactly: `on`
+Already have per-project `.environmental-impact-log.json` files from an older version? Import them with `python3 -I scripts/impact_report.py migrate <project-dir>`. Entries are tagged with the directory name and duplicates are skipped.
+
+## Modes
+
+Tracking always runs unless the mode is `off`. The mode is one word in `~/.claude/environmental-impact-tracker.state`.
+
+| Mode | Tracking | Line after large responses | Reports on request |
+|------|----------|----------------------------|--------------------|
+| `reports` (recommended) | yes | no | yes |
+| `per-response` | yes | yes | yes |
+| `both` | yes | yes | yes |
+| `off` | no | no | from what is already logged |
+
+Ask Claude to switch ("only reports", "show me after big responses", "turn it off") or edit the file yourself. `both` behaves the same as `per-response`; the legacy value `on` also means `per-response`. A missing state file keeps tracking quietly and Claude asks you to pick a mode. Turning the mode to `off` stops logging as well as display.
+
+## Reports
+
+Ask for a "weekly report", "monthly impact report", "Q3 environmental report", or "last month's footprint", or run the script directly:
 
 ```bash
-echo "on" > ~/.claude/environmental-impact-tracker.state
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N]
 ```
 
-Without step 1, the skill only fires on explicit request (and, per the Usage section below, even explicit requests are less reliable than you'd expect). Without step 2, the rule still works: a missing file defaults to `on`, but creating it up front means the toggle described below is ready to use immediately.
+`--back N` reports N periods ago, so "last month" is `monthly --back 1`. Weeks run Monday to Sunday; months, quarters, and years are calendar-based (UTC). The current period is marked "in progress", so its comparison to a full previous period can look low.
+
+Each report shows total water and energy with the change vs the previous period, a this-vs-last bar, share of water by project, and water over time by day (weekly), week (monthly), or month (quarterly and annual). The blocks are emoji, so the output renders anywhere text does.
 
 ## Usage
 
-**Reliable trigger**: the `CLAUDE.md` rule added during Setup. It fires automatically on any heavy turn (5,000+ tokens or subagent use), no need to ask.
+Tracking and per-response lines need no prompting; the hook does both. For everything else, be explicit. Testing against fresh Claude instances found that vague phrases like "show me this week's impact" don't reliably trigger the skill, and a phrase echoing the skill's description can get declined if Claude worries a specific Wh/mL figure looks like fabricated precision. What works:
 
-**Asking directly is less reliable than it sounds.** Testing this against fresh Claude instances (no prior context, no explicit instruction to use the skill) found that vague phrases don't autonomously trigger it. Even a phrase that closely echoes the skill's own description can get declined, because Claude may reason that reporting a specific Wh/mL figure without real per-request telemetry looks like fabricating precision, and choose not to invoke the skill on that basis alone. Two things help:
-
-- **Be explicit** about wanting an environmental/energy estimate, not just "impact" or "total": *"What's the estimated environmental impact of that response?"* works far more reliably than *"Show me this week's impact."*
-- **Name the skill directly** if a vague phrase doesn't land: *"Use the environmental-impact-tracker skill to show my session total."*
-
-If you want the "ask casually and it just works" experience, extend the `CLAUDE.md` enforcement rule from Setup to also cover explicit cumulative-total requests, rather than relying on the skill description to be picked up unprompted.
-
-## Enable / Disable
-
-Automatic firing is controlled by the toggle file from Setup, `~/.claude/environmental-impact-tracker.state`. It holds a single word: `on` or `off`.
-
-- **Turn it off**: ask directly, e.g. *"Turn off environmental impact tracking."* Claude writes `off` to the state file. Automatic display stops, but the skill still works if you ask for it by name.
-- **Turn it back on**: *"Turn on environmental impact tracking"* writes `on` back.
-- **Toggle it yourself** without asking Claude:
-
-```bash
-echo "off" > ~/.claude/environmental-impact-tracker.state   # disable
-echo "on"  > ~/.claude/environmental-impact-tracker.state   # re-enable
-```
-
-A missing or corrupted state file defaults to `on` (fails open), matching the skill's original always-on behavior rather than silently going quiet.
+- **Name the period and the word report**: *"Give me my monthly environmental impact report."*
+- **Name the skill** if a phrase doesn't land: *"Use the environmental-impact-tracker skill to show my quarterly report."*
+- **Or run the script**, which never depends on Claude choosing to act.
 
 ## How it works
+
+### Tracking
+
+Claude Code writes the token counts for every response into its session transcripts. `scripts/impact_hook.py` runs as a Stop hook after each response, converts those counts to energy and water with the rates below, and appends one entry per response to the shared log.
+
+- **Per-response math:** the long-context tier is decided by each response's own total tokens, cache reads count at 10% of the input rate, and every response (subagents included) pays the model's fixed overhead.
+- **Projects:** a response counts toward its working directory, rolled up to its git repo when it has one.
+- **Safe by design:** the hook never blocks a session. On any error it writes to stderr and exits cleanly.
+
+### Energy model
 
 Each query pays a **fixed per-query overhead** (routing/model load, independent of length) plus a **marginal per-token rate**. Long-context turns (>50,000 total tokens) switch to a separate, lower marginal rate. Real-world long-context inference is meaningfully more efficient per token than short chat turns, and a single flat rate can't represent both.
 
@@ -143,6 +184,16 @@ Notice most of the cost here comes from the four subagents, not the main turn. E
 This repo is maintained on an ongoing basis, not a one-time drop. Rates are updated whenever a major new Claude model ships or new peer-reviewed research on LLM inference energy/water use is published. See the Update Log in `references/sources.md` for the full history of what changed and why, and follow the instructions there when you do update it.
 
 ## Changelog
+
+**1.4.0** (2026-10-19)
+- Tracking is now automatic: a Stop hook logs every response (subagents included) from Claude Code's transcripts, replacing logging that depended on Claude choosing to display impact. In testing this recovered a large undercount (one month went from 1.6 Wh logged to 259.6 Wh)
+- Added four modes: `reports`, `per-response`, `both`, `off`. The skill asks for a mode on first use and recommends `reports`
+- Added `scripts/impact_hook.py --backfill` to rebuild history from existing transcripts
+- Replaced the `CLAUDE.md` display rule with one that leaves display to the hook
+
+**1.3.0** (2026-10-19)
+- Added weekly, monthly, quarterly, and annual reports (`scripts/impact_report.py`) with a blue-block visual: this vs last period, share by project, and water over time
+- Moved the log to one shared file, `~/.claude/environmental-impact-log.json`, with a `project` field on every entry, plus a `migrate` command for old per-project logs
 
 **1.2.0** (2026-09-03)
 - Added an on/off toggle: `~/.claude/environmental-impact-tracker.state` controls automatic firing without uninstalling the skill or editing `CLAUDE.md`
