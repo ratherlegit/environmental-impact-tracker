@@ -1,12 +1,12 @@
 ---
 name: environmental-impact-tracker
-version: 1.4.0
+version: 1.5.0
 description: Calculates and displays the environmental footprint of Claude's token usage, translating computational costs into energy consumption (Wh), water usage (mL), and relatable real-world comparisons. Use when: (1) a single request/response exceeds 5,000 tokens, (2) completing a complex task like coding, document generation, or research, (3) the user asks about environmental impact, energy use, or sustainability, (4) tracking cumulative session, weekly, or project totals when requested, (5) the user asks for a weekly, monthly, quarterly, or annual environmental impact report (e.g. "monthly impact report", "Q3 environmental report", "last month's footprint").
 ---
 
 # Environmental Impact Tracker
 
-**Version:** 1.4.0 · **Last updated:** 2026-10-19. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Version:** 1.5.0 · **Last updated:** 2026-10-19. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
@@ -80,11 +80,13 @@ Total_water    (mL) = Total_energy × 1.7
 
 | Model | Fixed overhead (Wh/query) | Marginal Input (Wh/MTok) | Marginal Output (Wh/MTok) | Marginal Blended (Wh/MTok) | Large-Context Marginal Blended (Wh/MTok, >50K tok) |
 |-------|------|-------|--------|---------|---------|
-| Claude Fable 5 | 0.177 | 90 | 447 | 430 | 35 |
-| Claude Opus 5 | 0.088 | 45 | 223 | 215 | 18 |
-| Claude Sonnet 5 | 0.053 | 27 | 134 | 129 | 11 |
-| Claude Haiku 4.5 | 0.018 | 9 | 45 | 43 | 4 |
-| Unknown (use Sonnet) | 0.053 | 27 | 134 | 129 | 11 |
+| Claude Fable 5 | 0.531 | 270 | 1341 | 1290 | 35 |
+| Claude Opus 5 | 0.264 | 135 | 669 | 645 | 18 |
+| Claude Sonnet 5 | 0.159 | 81 | 402 | 387 | 11 |
+| Claude Haiku 4.5 | 0.054 | 27 | 135 | 129 | 4 |
+| Unknown (use Sonnet) | 0.159 | 81 | 402 | 387 | 11 |
+
+These are **mid-level** estimates: the typical-tier rates are 3x the optimized-serving derivation and sit between that derivation and measured Claude benchmarks. The large-context column is unchanged. See `references/sources.md`.
 
 Older generations (Opus/Sonnet/Haiku 4.x and earlier) share the same rate as their current-generation successor in the table above. Anthropic hasn't published per-generation compute deltas, so we hold the rate constant within a tier rather than guess.
 

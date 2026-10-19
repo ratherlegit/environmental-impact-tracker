@@ -1,6 +1,6 @@
 # Environmental Impact Tracker
 
-**v1.4.0**
+**v1.5.0**
 
 A Claude Code skill that calculates and displays the environmental footprint of your AI interactions, translating abstract token usage into energy consumption (Wh), water usage (mL), and relatable real-world comparisons.
 
@@ -31,15 +31,15 @@ Ask Claude for the longer display of any exchange and you get:
 ```
 🌍 Environmental Impact of This Response
 
-Energy: 19.36 Wh (about 1 phone charge)
-Water:  32.90 mL (about 2 tablespoons)
+Energy: 58.07 Wh (about 3 phone charges)
+Water:  98.71 mL (about 6 tablespoons)
 
 Model: Claude Sonnet 5
 Tokens: 25,000 in + 6,000 out + ~2,500 skill = 33,500
 + 136,000 agent tokens across 4 agents = 169,500 total
 
 💡 If a lighter model had been used:
-  Haiku: 6.46 Wh / 10.97 mL  (3.0x less)
+  Haiku: 19.36 Wh / 32.90 mL  (3.0x less)
 
 Note: Estimates. See references/sources.md for methodology.
 ```
@@ -142,10 +142,12 @@ Each query pays a **fixed per-query overhead** (routing/model load, independent 
 
 | Model | Fixed overhead (Wh/query) | Marginal Input (Wh/MTok) | Marginal Output (Wh/MTok) | Long-context Marginal Blended (Wh/MTok) |
 |-------|------|-------|--------|---------|
-| Claude Fable 5 | 0.177 | 90 | 447 | 35 |
-| Claude Opus 5 | 0.088 | 45 | 223 | 18 |
-| Claude Sonnet 5 | 0.053 | 27 | 134 | 11 |
-| Claude Haiku 4.5 | 0.018 | 9 | 45 | 4 |
+| Claude Fable 5 | 0.531 | 270 | 1,341 | 35 |
+| Claude Opus 5 | 0.264 | 135 | 669 | 18 |
+| Claude Sonnet 5 | 0.159 | 81 | 402 | 11 |
+| Claude Haiku 4.5 | 0.054 | 27 | 135 | 4 |
+
+These are **mid-level estimates**. The typical-tier rates are 3x what Joule's optimized-serving data implies, which lands between that derivation and measured Claude benchmarks (about 9 to 13x higher). For a medium prompt (1,000 in / 1,000 out) Sonnet comes out at about 0.64 Wh, against 0.2 Wh from the optimized derivation and 2.78 Wh measured on Claude 3.7 Sonnet. The long-context rate is unchanged. Anthropic publishes no energy figures and no source covers the Claude 5-series, so treat every number as an estimate.
 
 Water usage: 1.7 mL per Wh (average data center cooling + power generation).
 
@@ -153,29 +155,29 @@ The fixed-overhead/marginal-rate split is derived from a peer-reviewed 2026 Joul
 
 ### Worked example
 
-Using the sample output above: Claude Sonnet 5, 25,000 input + 6,000 output + 2,500 skill-load tokens on the main turn, plus 4 subagents averaging 34,000 tokens each, all under the 50,000-token long-context threshold, so every component uses the typical-tier rates (fixed overhead 0.053 Wh, marginal input 27 Wh/MTok, marginal output 134 Wh/MTok, marginal blended 129 Wh/MTok):
+Using the sample output above: Claude Sonnet 5, 25,000 input + 6,000 output + 2,500 skill-load tokens on the main turn, plus 4 subagents averaging 34,000 tokens each, all under the 50,000-token long-context threshold, so every component uses the typical-tier rates (fixed overhead 0.159 Wh, marginal input 81 Wh/MTok, marginal output 402 Wh/MTok, marginal blended 387 Wh/MTok):
 
 **Main query:**
 ```
-Energy_input  = 25,000 × 27  / 1,000,000 = 0.6750 Wh
-Energy_output =  6,000 × 134 / 1,000,000 = 0.8040 Wh
-Energy_skill  =  2,500 × 27  / 1,000,000 = 0.0675 Wh
-Energy_query  = 0.053 (fixed overhead) + 0.6750 + 0.8040 + 0.0675 = 1.60 Wh
+Energy_input  = 25,000 × 81  / 1,000,000 = 2.0250 Wh
+Energy_output =  6,000 × 402 / 1,000,000 = 2.4120 Wh
+Energy_skill  =  2,500 × 81  / 1,000,000 = 0.2025 Wh
+Energy_query  = 0.159 (fixed overhead) + 2.0250 + 2.4120 + 0.2025 = 4.80 Wh
 ```
 
 **Each subagent** (own fixed overhead, own tier check: 34,000 tokens is under 50,000, so typical-tier blended rate applies):
 ```
-Energy_agent = 0.053 + (34,000 × 129 / 1,000,000) = 0.053 + 4.386 = 4.44 Wh
+Energy_agent = 0.159 + (34,000 × 387 / 1,000,000) = 0.159 + 13.158 = 13.32 Wh
 ```
-Four subagents: `4 × 4.44 = 17.76 Wh`
+Four subagents: `4 × 13.32 = 53.27 Wh`
 
 **Total:**
 ```
-Total_energy = 1.60 (query) + 17.76 (agents) = 19.36 Wh
-Total_water  = 19.36 × 1.7 = 32.9 mL
+Total_energy = 4.80 (query) + 53.27 (agents) = 58.07 Wh
+Total_water  = 58.07 × 1.7 = 98.7 mL
 ```
 
-Notice most of the cost here comes from the four subagents, not the main turn. Each one pays its own 0.053 Wh fixed overhead on top of its marginal token cost, which is exactly the behavior the old flat-rate model couldn't represent: spinning up four separate model invocations has a real, distinct cost from one invocation handling four times the tokens.
+Notice most of the cost here comes from the four subagents, not the main turn. Each one pays its own 0.159 Wh fixed overhead on top of its marginal token cost, which is exactly the behavior the old flat-rate model couldn't represent: spinning up four separate model invocations has a real, distinct cost from one invocation handling four times the tokens.
 
 > **Note:** These are estimates derived from public benchmarks and pricing signals, not official Anthropic energy figures. Actual consumption varies by data center location, cooling method, and grid energy mix.
 
@@ -184,6 +186,10 @@ Notice most of the cost here comes from the four subagents, not the main turn. E
 This repo is maintained on an ongoing basis, not a one-time drop. Rates are updated whenever a major new Claude model ships or new peer-reviewed research on LLM inference energy/water use is published. See the Update Log in `references/sources.md` for the full history of what changed and why, and follow the instructions there when you do update it.
 
 ## Changelog
+
+**1.5.0** (2026-10-19)
+- Moved the typical-tier rates to a mid-level estimate (3x the previous optimized-serving values), because measured Claude benchmarks and other published estimates run well above the old figures. The large-context rate is unchanged. Reports now read higher than under 1.4.0, most for short-response work
+- Added newer sources to `references/sources.md`: Google's Gemini disclosure, measured Claude 3.7 Sonnet results, and two Claude Code analyses. Anthropic still publishes no figures for any Claude model
 
 **1.4.0** (2026-10-19)
 - Tracking is now automatic: a Stop hook logs every response (subagents included) from Claude Code's transcripts, replacing logging that depended on Claude choosing to display impact. Prevents undercounting. 

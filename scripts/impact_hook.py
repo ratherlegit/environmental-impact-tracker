@@ -26,11 +26,13 @@ STATE = os.path.join(HOME, ".claude", "environmental-impact-tracker.state")
 PROJECTS = os.path.join(HOME, ".claude", "projects")
 
 # model: (fixed overhead Wh/query, marginal input, marginal output, large-context blended) Wh/MTok
+# Typical-tier values are mid-level estimates: 3x the optimized-serving derivation (Joule 2026),
+# about the geometric midpoint to measured Claude benchmarks (arXiv 2505.09598). See references/sources.md.
 RATES = {
-    "fable": (0.177, 90, 447, 35),
-    "opus": (0.088, 45, 223, 18),
-    "sonnet": (0.053, 27, 134, 11),
-    "haiku": (0.018, 9, 45, 4),
+    "fable": (0.531, 270, 1341, 35),
+    "opus": (0.264, 135, 669, 18),
+    "sonnet": (0.159, 81, 402, 11),
+    "haiku": (0.054, 27, 135, 4),
 }
 LARGE_CONTEXT = 50_000
 DISPLAY_THRESHOLD = 5_000
