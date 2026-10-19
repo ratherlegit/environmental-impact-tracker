@@ -1,45 +1,57 @@
 ---
 name: environmental-impact-tracker
-version: 1.2.0
-description: Calculates and displays the environmental footprint of Claude's token usage, translating computational costs into energy consumption (Wh), water usage (mL), and relatable real-world comparisons. Use when: (1) a single request/response exceeds 5,000 tokens, (2) completing a complex task like coding, document generation, or research, (3) the user asks about environmental impact, energy use, or sustainability, (4) tracking cumulative session, weekly, or project totals when requested.
+version: 1.4.0
+description: Calculates and displays the environmental footprint of Claude's token usage, translating computational costs into energy consumption (Wh), water usage (mL), and relatable real-world comparisons. Use when: (1) a single request/response exceeds 5,000 tokens, (2) completing a complex task like coding, document generation, or research, (3) the user asks about environmental impact, energy use, or sustainability, (4) tracking cumulative session, weekly, or project totals when requested, (5) the user asks for a weekly, monthly, quarterly, or annual environmental impact report (e.g. "monthly impact report", "Q3 environmental report", "last month's footprint").
 ---
 
 # Environmental Impact Tracker
 
-**Version:** 1.2.0 · **Last updated:** 2026-09-03. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Version:** 1.4.0 · **Last updated:** 2026-10-19. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
 ## Setup (First Use)
 
-1. **Add enforcement rule to `CLAUDE.md`** (or `AGENTS.md` / `GEMINI.md`) if not already present. Global (`~/.claude/CLAUDE.md`, applies to every project) is recommended over per-project, since the auto-trigger is only as reliable as the rule's reach:
+1. **Ask the user which mode they want** if `~/.claude/environmental-impact-tracker.state` does not exist, then write their choice to it (see Modes). Recommend `reports`.
+
+2. **Install the tracking hook.** Tracking is done by a Stop hook, not by Claude, so it records every response. Add this to `hooks.Stop` in `~/.claude/settings.json` (ask the user first, since it edits their global settings):
+```json
+{ "hooks": [ { "type": "command", "command": "python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_hook.py", "timeout": 30 } ] }
+```
+3. **Backfill existing history** once: `python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_hook.py --backfill`. It reads every transcript under `~/.claude/projects` (only as far back as Claude Code kept them) and skips responses already logged.
+
+4. **Add this rule to `~/.claude/CLAUDE.md`** so Claude does not display impact on its own:
 ```markdown
 ## Environmental Impact
-Before responding to any turn that involves subagents OR is estimated to exceed 5,000 tokens, check `~/.claude/environmental-impact-tracker.state`. If the file is missing or contains "on" (the default), display the environmental impact using the `environmental-impact-tracker` skill; treat this as a hard rule and do not skip it. If the file contains "off", skip the automatic display, but the skill is still available on explicit request.
+Impact tracking is automatic (a Stop hook logs every response). Do not display impact on your own. When the user asks for an impact report, a total, or to change the tracking mode, use the `environmental-impact-tracker` skill.
 ```
-
-2. **Create the toggle state file** at `~/.claude/environmental-impact-tracker.state` if it doesn't exist, containing exactly: `on`
-
-3. **Create log file** at `.environmental-impact-log.json` in the project root if it doesn't exist: `{ "entries": [] }`
+5. **Shared log** lives at `~/.claude/environmental-impact-log.json` and is created by the hook. Older per-project logs can be imported with `impact_report.py migrate <project-dir>`.
 
 ---
 
-## Enable / Disable
+## Modes
 
-The skill's automatic firing is controlled by `~/.claude/environmental-impact-tracker.state`, a single-word file: `on` or `off`.
+The mode is a single word in `~/.claude/environmental-impact-tracker.state`. Tracking always runs unless the mode is `off`.
 
-- **"Turn off environmental impact tracking"** (or similar): write `off` to the state file, confirm it's done, and stop auto-displaying until it's turned back on.
-- **"Turn on environmental impact tracking"** (or similar): write `on` to the state file, confirm it's done.
-- **When off**, the hard rule in `CLAUDE.md` does not fire automatically, but the skill is still fully usable on explicit request ("show me my session total" plus the skill named directly, or a clear ask about environmental impact). Off means "stop interrupting me automatically," not "disable entirely."
-- **When checking state**, missing file or unreadable content defaults to `on` (fail open, matching the original always-on behavior) rather than silently going quiet.
+| Mode | Tracking | Per-response line after large responses | Reports on request |
+|------|----------|------------------------------------------|--------------------|
+| `reports` (recommended) | yes | no | yes |
+| `per-response` | yes | yes | yes |
+| `both` | yes | yes | yes |
+| `off` | no | no | yes, from what is already logged |
+
+- `both` behaves the same as `per-response`; the name is kept so the choice reads naturally. The legacy value `on` also means `per-response`.
+- A "large response" is a turn with more than 5,000 fresh tokens (cache re-reads excluded) or any subagent response. The hook prints the line itself, so Claude does not need to.
+- When the user asks to change mode ("only reports", "show me after big responses", "turn it off"), write the new word to the state file and confirm. Turning it `off` also stops logging; say so.
+- Missing or unreadable state file: tracking still runs, nothing is displayed, and the skill asks the user to pick a mode.
 
 ---
 
 ## When to Display
 
-- Single turn exceeds **5,000 tokens**, or involves subagents, or completes a complex task
-- User asks about environmental impact, energy use, or sustainability
-- After displaying, offer: "Want to see your session, weekly, or project total?"
+- Claude does not display impact on its own. The hook handles per-response lines according to the mode.
+- Use this skill when the user asks for a report, a session or period total, or the impact of the current conversation, or wants to change the mode.
+- After showing a report, offer the other periods (weekly, monthly, quarterly, annual).
 
 **Note on autonomous triggering:** testing found that a bare, vague phrase like "show me my session total" or "show me this week's impact" (with no mention of environmental/energy/carbon/footprint) does not reliably trigger this skill on its own, even when this skill is installed and available; it reads as too ambiguous against other plausible meanings. Don't rely on soft phrase-matching alone. If a user's request could plausibly mean this skill (session/weekly/project totals, especially as a follow-up after this skill has already displayed impact once this session), treat it as a match rather than asking for clarification. The ambiguity problem is specifically about a *cold* trigger with no prior signal, not about a follow-up in a conversation where this skill's domain is already established.
 
@@ -111,17 +123,30 @@ Omit agent line if no Agent calls. Omit lighter model section if Haiku was used.
 
 ## Cumulative Tracking
 
-After every impact display, append to `.environmental-impact-log.json`:
+The hook appends one entry per assistant response (subagent responses included) to `~/.claude/environmental-impact-log.json`. Claude never writes to the log by hand. An entry looks like:
 ```json
-{ "timestamp": "2026-09-03T14:32:00Z", "model": "claude-sonnet-5", "tier": "large-context", "energy_wh": 22.1, "water_ml": 37.6, "total_tokens": 167000, "context": "brief description" }
+{ "timestamp": "2026-10-19T14:32:00.000Z", "project": "StepGoals", "model": "claude-sonnet-5-5", "tier": "large-context", "energy_wh": 0.21, "water_ml": 0.36, "total_tokens": 89000, "fresh_tokens": 1900, "id": "msg_...", "session": "...", "subagent": false }
+```
+- Energy is computed per response with the Calculation rates: tier is decided by that response's own total tokens, cache reads count at 10% of the input rate, and each response pays the model's fixed overhead.
+- `project` is the response's working directory, rolled up to its git repo when it has one.
+- Entries written before 1.4.0 are hand estimates with `context` text and no `id`.
+
+**Summaries:** use the period reports below. For "this session", sum entries with the current session id.
+
+---
+
+## Period Reports
+
+For weekly, monthly, quarterly, or annual reports, **run the script instead of aggregating by hand**. Treat any request pairing "report" (or "impact", "footprint", "usage") with one of those periods as a match, even without the words environmental or energy.
+
+```
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N]
 ```
 
-**Summaries (read log and aggregate):**
-- **Session**: entries since today's first entry
-- **This week**: entries within the current Mon–Sun week
-- **This project**: all entries in the file
-
-To reset a session: append `{ "timestamp": "...", "context": "session_start" }` and use that as the new session boundary.
+- Periods: weekly is Mon–Sun, the rest are calendar months, quarters, and years (UTC). `--back N` reports N periods ago ("last month" is `monthly --back 1`).
+- Output covers total energy and water with change vs the previous period, tokens, a per-project breakdown (largest first), and water over time by day (weekly), week (monthly), or month (quarterly/annual). The current period is marked "in progress", so its comparison to a full previous period can look low.
+- The script prints a blue-block visual (this vs last period, share by project, water over time). Paste its output unchanged inside a code block so the blocks stay aligned. It already includes bottle and phone-charge comparisons, so only add other comparisons from `references/comparisons.md` if asked.
+- Entries logged before 1.3.0 may lack `project` and show as "unknown"; entries without `energy_wh` (such as `session_start` markers) are ignored.
 
 ---
 
