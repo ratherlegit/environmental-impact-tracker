@@ -186,7 +186,7 @@ This repo is maintained on an ongoing basis, not a one-time drop. Rates are upda
 ## Changelog
 
 **1.4.0** (2026-10-19)
-- Tracking is now automatic: a Stop hook logs every response (subagents included) from Claude Code's transcripts, replacing logging that depended on Claude choosing to display impact. In testing this recovered a large undercount (one month went from 1.6 Wh logged to 259.6 Wh)
+- Tracking is now automatic: a Stop hook logs every response (subagents included) from Claude Code's transcripts, replacing logging that depended on Claude choosing to display impact. Prevents undercounting. 
 - Added four modes: `reports`, `per-response`, `both`, `off`. The skill asks for a mode on first use and recommends `reports`
 - Added `scripts/impact_hook.py --backfill` to rebuild history from existing transcripts
 - Replaced the `CLAUDE.md` display rule with one that leaves display to the hook
