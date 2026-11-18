@@ -1,12 +1,12 @@
 ---
 name: environmental-impact-tracker
-version: 1.5.0
+version: 1.6.0
 description: Calculates and displays the environmental footprint of Claude's token usage, translating computational costs into energy consumption (Wh), water usage (mL), and relatable real-world comparisons. Use when: (1) a single request/response exceeds 5,000 tokens, (2) completing a complex task like coding, document generation, or research, (3) the user asks about environmental impact, energy use, or sustainability, (4) tracking cumulative session, weekly, or project totals when requested, (5) the user asks for a weekly, monthly, quarterly, or annual environmental impact report (e.g. "monthly impact report", "Q3 environmental report", "last month's footprint").
 ---
 
 # Environmental Impact Tracker
 
-**Version:** 1.5.0 · **Last updated:** 2026-10-19. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
+**Version:** 1.6.0 · **Last updated:** 2026-11-18. If today is 6+ months past this date, flag to the user that rates may be stale and read `references/sources.md`.
 
 ---
 
@@ -142,13 +142,28 @@ The hook appends one entry per assistant response (subagent responses included) 
 For weekly, monthly, quarterly, or annual reports, **run the script instead of aggregating by hand**. Treat any request pairing "report" (or "impact", "footprint", "usage") with one of those periods as a match, even without the words environmental or energy.
 
 ```
-python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N]
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N] [--anonymize]
 ```
 
 - Periods: weekly is Mon–Sun, the rest are calendar months, quarters, and years (UTC). `--back N` reports N periods ago ("last month" is `monthly --back 1`).
 - Output covers total energy and water with change vs the previous period, tokens, a per-project breakdown (largest first), and water over time by day (weekly), week (monthly), or month (quarterly/annual). The current period is marked "in progress", so its comparison to a full previous period can look low.
 - The script prints a blue-block visual (this vs last period, share by project, water over time). Paste its output unchanged inside a code block so the blocks stay aligned. It already includes bottle and phone-charge comparisons, so only add other comparisons from `references/comparisons.md` if asked.
 - Entries logged before 1.3.0 may lack `project` and show as "unknown"; entries without `energy_wh` (such as `session_start` markers) are ignored.
+- The terminal report also charts energy over time (🟨 blocks) under the water chart.
+
+### Shareable HTML card
+
+For a visual version (stat tiles, gradient bars, bottle and phone icons for the comparisons, water and energy column charts with units, automatic light and dark theme), add `--format html`:
+
+```
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <period> [--back N] --format html [--out FILE] [--anonymize]
+```
+
+- Writes one self-contained `.html` file (no external dependencies). Default path is `impact-report-<period>.html` in the current directory; `--out` sets another. Tell the user the full path and offer to open it (`open <path>`).
+- `--anonymize` swaps real project names for made-up ones (Recipe Box, garden-planner, ...) so the card can be shared or screenshotted as an example. Use it whenever the user says the report is for sharing, a demo, a portfolio, or screenshots. It also works on the terminal report.
+- Trigger phrases: "visual report", "shareable report", "html report", "report card", "make it look nice", "something I can screenshot".
+- Large counts scale down: at most 24 icons are drawn, and the caption says how many items one icon stands for.
+- Use the terminal output by default; generate the card when the user asks for a visual or shareable version, then offer it after a terminal report.
 
 ---
 

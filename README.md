@@ -1,6 +1,6 @@
 # Environmental Impact Tracker
 
-**v1.5.0**
+**v1.6.0**
 
 A Claude Code skill that calculates and displays the environmental footprint of your AI interactions, translating abstract token usage into energy consumption (Wh), water usage (mL), and relatable real-world comparisons.
 
@@ -15,6 +15,7 @@ Tracks the energy and water use of **every** Claude response in the background, 
 Features:
 - **Tracks everything**: a Stop hook logs every response, subagents included, so nothing depends on Claude remembering to log it
 - **Period reports**: weekly, monthly, quarterly, and annual totals with change vs the previous period, a per-project breakdown, and a trend chart
+- **Shareable HTML card**: a self-contained visual report with gradient charts, units on every chart, and bottle and phone icons for the comparisons (see Reports below)
 - **Four modes**: reports only, a line after large responses, both, or off
 - **History backfill**: rebuilds past usage from Claude Code's own session transcripts
 - **Per-turn display on request**: energy and water for any exchange, with model efficiency comparison and subagent totals (sample below)
@@ -111,12 +112,28 @@ Ask Claude to switch ("only reports", "show me after big responses", "turn it of
 Ask for a "weekly report", "monthly impact report", "Q3 environmental report", or "last month's footprint", or run the script directly:
 
 ```bash
-python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N]
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N] [--anonymize]
 ```
 
 `--back N` reports N periods ago, so "last month" is `monthly --back 1`. Weeks run Monday to Sunday; months, quarters, and years are calendar-based (UTC). The current period is marked "in progress", so its comparison to a full previous period can look low.
 
-Each report shows total water and energy with the change vs the previous period, a this-vs-last bar, share of water by project, and water over time by day (weekly), week (monthly), or month (quarterly and annual). The blocks are emoji, so the output renders anywhere text does.
+Each report shows total water and energy with the change vs the previous period, a this-vs-last bar, share of water by project, and water over time by day (weekly), week (monthly), or month (quarterly and annual). The blocks are emoji, so the output renders anywhere text does. Water and energy each get their own over-time chart.
+
+### Shareable HTML card
+
+![Monthly impact report card](docs/impact-report-card.png)
+
+For a visual version, add `--format html`:
+
+```bash
+python3 -I ~/.claude/skills/environmental-impact-tracker/scripts/impact_report.py report <weekly|monthly|quarterly|annual> [--back N] --format html [--out FILE] [--anonymize]
+```
+
+- Writes one self-contained `.html` file with no external dependencies, to `impact-report-<period>.html` in the current directory unless you pass `--out`. Open it in any browser.
+- Stat tiles, gradient bars, and column charts labeled with units (mL, Wh). It follows your system's light or dark theme and stacks to one column on a phone.
+- The water and energy comparisons are drawn: one bottle icon per 500 mL and one phone icon per 20 Wh, with the last icon partly filled for fractions. At most 24 icons are drawn, and the caption says how many items one icon stands for.
+- `--anonymize` swaps real project names for made-up ones, so a report can be shared or screenshotted as an example. It works on the terminal report too.
+- Ask Claude for a "visual report", "shareable report", or "something I can screenshot" and it runs this for you.
 
 ## Usage
 
@@ -186,6 +203,12 @@ Notice most of the cost here comes from the four subagents, not the main turn. E
 This repo is maintained on an ongoing basis, not a one-time drop. Rates are updated whenever a major new Claude model ships or new peer-reviewed research on LLM inference energy/water use is published. See the Update Log in `references/sources.md` for the full history of what changed and why, and follow the instructions there when you do update it.
 
 ## Changelog
+
+**1.6.0** (2026-11-18)
+- Added a shareable HTML report card (`--format html`, `--out FILE`): stat tiles, gradient bars, charts with units, and drawn bottle and phone icons for the comparisons, with automatic light and dark themes
+- Added `--anonymize` to swap real project names for made-up ones in terminal and HTML reports
+- Added an energy-over-time chart to the terminal report, under the water chart
+- Refactored `impact_report.py` so the terminal and HTML renderers share one aggregation step
 
 **1.5.0** (2026-10-19)
 - Moved the typical-tier rates to a mid-level estimate (3x the previous optimized-serving values), because measured Claude benchmarks and other published estimates run well above the old figures. The large-context rate is unchanged. Reports now read higher than under 1.4.0, most for short-response work
